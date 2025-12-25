@@ -534,26 +534,11 @@
             color: var(--text);
         }
         
-        .update-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
         .update-card {
             padding: 25px;
             border-radius: 15px;
-            border: 1px solid;
-        }
-        
-        .update-card.collection {
+            border: 1px solid var(--success);
             background: rgba(46, 204, 113, 0.1);
-            border-color: var(--success);
-        }
-        
-        .update-card.extensions {
-            background: rgba(52, 152, 219, 0.1);
-            border-color: #3498db;
         }
         
         .update-card h3 {
@@ -562,12 +547,8 @@
             gap: 10px;
             margin-bottom: 15px;
             font-size: 16px;
+            color: var(--success);
         }
-        
-        .update-card.collection h3 { color: var(--success); }
-        .update-card.extensions h3 { color: #3498db; }
-        
-        .update-card .icon { font-size: 24px; }
         
         .update-card p {
             color: var(--text-muted);
@@ -591,16 +572,6 @@
             font-size: 12px;
         }
         
-        .update-card .file-info {
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
-            font-size: 12px;
-        }
-        
-        .update-card .file-info strong { color: var(--text); }
-        
         @media (max-width: 768px) {
             .header-top { flex-direction: column; align-items: stretch; }
             .global-stats { justify-content: space-around; }
@@ -609,7 +580,6 @@
             .filters { justify-content: center; }
             .cards-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
             .progress-grid { grid-template-columns: 1fr; }
-            .update-cards { grid-template-columns: 1fr; }
             .exp-filter-popup { min-width: 280px; }
             .exp-checkbox-list { grid-template-columns: 1fr; }
         }
@@ -618,7 +588,7 @@
 <body>
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
-        <div class="loading-text">Chargement de la collection...</div>
+        <div class="loading-text" id="loadingText">Chargement de la collection...</div>
     </div>
 
     <div class="header">
@@ -730,29 +700,16 @@
     
     <div class="update-section">
         <h2>🔄 Comment mettre à jour ?</h2>
-        <div class="update-cards">
-            <div class="update-card collection">
-                <h3><span class="icon">📦</span> Mettre à jour ma collection</h3>
-                <p>Quand tu obtiens de nouvelles cartes dans le jeu.</p>
-                <ol>
-                    <li>Va sur <strong>Pokemon Zone</strong> → synchronise</li>
-                    <li><strong>DevTools</strong> (F12) → Network → Fetch/XHR</li>
-                    <li>Copie la réponse de <code>mine/</code></li>
-                    <li>Remplace <code>data/mine.json</code> dans GitHub</li>
-                    <li>Vercel redéploie automatiquement ! 🚀</li>
-                </ol>
-            </div>
-            
-            <div class="update-card extensions">
-                <h3><span class="icon">🆕</span> Nouvelle extension</h3>
-                <p>Quand une nouvelle extension sort (B2, etc.)</p>
-                <ol>
-                    <li>Va sur <strong>Pokemon Zone</strong></li>
-                    <li>Copie la réponse de <code>card-data/</code></li>
-                    <li>Remplace <code>data/card-data.json</code></li>
-                    <li>+ Met à jour <code>data/mine.json</code></li>
-                </ol>
-            </div>
+        <div class="update-card">
+            <h3><span>📦</span> Mettre à jour la collection</h3>
+            <p>Pour mettre à jour ta collection ou ajouter une nouvelle extension, envoie-moi les fichiers de Pokemon Zone et je te régénère le fichier <code>card-data.json</code> !</p>
+            <ol>
+                <li>Va sur <strong>Pokemon Zone</strong> → synchronise ton compte</li>
+                <li>Ouvre <strong>DevTools</strong> (F12) → Network → Fetch/XHR</li>
+                <li>Copie la réponse de <code>mine/</code></li>
+                <li>Envoie-moi le fichier, je te donne le nouveau <code>card-data.json</code></li>
+                <li>Remplace le fichier dans GitHub → Vercel redéploie ! 🚀</li>
+            </ol>
         </div>
     </div>
     
@@ -776,18 +733,6 @@
     
     var EXP_ORDER = ["A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b", "B1", "B1a", "PROMO-A", "PROMO-B"];
     
-    var MAIN_RARITIES = ["C", "U", "R", "RR"];
-    var RARITY_SYMBOLS = {
-        "C": "◇", "U": "◇◇", "R": "◇◇◇", "RR": "◇◇◇◇",
-        "AR": "★", "SR": "★★", "SAR": "★★", "SSR": "★★★",
-        "UR": "👑", "IM": "👑", "S": "✦"
-    };
-    var RARITY_NAMES = {
-        "C": "Common", "U": "Uncommon", "R": "Rare", "RR": "Double Rare",
-        "AR": "Art Rare", "SR": "Super Rare", "SAR": "Special Art Rare",
-        "SSR": "Shiny Super Rare", "UR": "Ultra Rare", "IM": "Immersive", "S": "Shiny"
-    };
-    
     var currentFilter = "all";
     var selectedExps = {};
     var currentRarity = "all";
@@ -796,88 +741,24 @@
     
     async function loadData() {
         try {
-            var mineRes = await fetch("data/mine.json");
-            var mineData = await mineRes.json();
+            document.getElementById("loadingText").textContent = "Chargement des données...";
             
-            var cardDataRes = await fetch("data/card-data.json");
-            var cardData = await cardDataRes.json();
+            var res = await fetch("data/card-data.json");
+            if (!res.ok) throw new Error("Fichier card-data.json introuvable");
             
-            processData(mineData, cardData);
+            DATA = await res.json();
+            
+            // Init selected exps
+            EXP_ORDER.forEach(function(exp) {
+                if (DATA.stats && DATA.stats[exp]) selectedExps[exp] = true;
+            });
             
             document.getElementById("loadingScreen").classList.add("hidden");
             init();
         } catch (err) {
-            console.error("Erreur chargement:", err);
-            document.querySelector(".loading-text").textContent = "Erreur de chargement: " + err.message;
+            console.error("Erreur:", err);
+            document.getElementById("loadingText").textContent = "Erreur: " + err.message;
         }
-    }
-    
-    function processData(mineData, cardData) {
-        var player = mineData.data.player;
-        DATA.player = {
-            name: player.name,
-            level: player.level,
-            avatarUrl: player.icon ? player.icon.assetUrl : null
-        };
-        
-        var ownedMap = {};
-        mineData.data.cards.forEach(function(c) {
-            ownedMap[c.id] = (ownedMap[c.id] || 0) + 1;
-        });
-        
-        var allCards = cardData.data;
-        var cards = [];
-        var stats = {};
-        
-        allCards.forEach(function(card) {
-            var rarity = card.rarity || "C";
-            var isMain = MAIN_RARITIES.indexOf(rarity) !== -1;
-            var owned = ownedMap[card.id] || 0;
-            
-            var exps = [];
-            var nums = {};
-            if (card.sets) {
-                card.sets.forEach(function(s) {
-                    var expCode = s.id.split("_")[0];
-                    exps.push(expCode);
-                    nums[expCode] = s.number;
-                    
-                    if (!stats[expCode]) {
-                        stats[expCode] = { mainOwned: 0, mainTotal: 0, specialOwned: 0, specialTotal: 0 };
-                    }
-                    if (isMain) {
-                        stats[expCode].mainTotal++;
-                        if (owned > 0) stats[expCode].mainOwned++;
-                    } else {
-                        stats[expCode].specialTotal++;
-                        if (owned > 0) stats[expCode].specialOwned++;
-                    }
-                });
-            }
-            
-            cards.push({
-                id: card.id,
-                name: card.name,
-                rarity: rarity,
-                raritySymbol: RARITY_SYMBOLS[rarity] || "?",
-                rarityName: RARITY_NAMES[rarity] || rarity,
-                isMain: isMain,
-                owned: owned > 0,
-                amount: owned,
-                img: card.image,
-                exps: exps,
-                nums: nums,
-                type: card.type,
-                hp: card.hp
-            });
-        });
-        
-        DATA.cards = cards;
-        DATA.stats = stats;
-        
-        EXP_ORDER.forEach(function(exp) {
-            if (stats[exp]) selectedExps[exp] = true;
-        });
     }
     
     function init() {
@@ -888,9 +769,7 @@
             document.getElementById("playerAvatar").src = DATA.player.avatarUrl;
         }
         
-        var completeCount = 0;
-        var totalExp = 0;
-        
+        var completeCount = 0, totalExp = 0;
         EXP_ORDER.forEach(function(exp) {
             var s = DATA.stats[exp];
             if (s) {
@@ -994,12 +873,8 @@
                 '<div class="exp-info">' +
                     '<div class="exp-name">' + EXP_NAMES[exp] + ' <span class="exp-code">(' + exp + ')</span></div>' +
                     '<div class="progress-bar-container">' +
-                        '<div class="progress-bar" title="Principales">' +
-                            '<div class="progress-fill main" style="width: ' + mainPct + '%"></div>' +
-                        '</div>' +
-                        '<div class="progress-bar" style="max-width: 60px;" title="Spéciales">' +
-                            '<div class="progress-fill special" style="width: ' + specialPct + '%"></div>' +
-                        '</div>' +
+                        '<div class="progress-bar" title="Principales"><div class="progress-fill main" style="width:' + mainPct + '%"></div></div>' +
+                        '<div class="progress-bar" style="max-width:60px" title="Spéciales"><div class="progress-fill special" style="width:' + specialPct + '%"></div></div>' +
                     '</div>' +
                     '<div class="exp-stats">' +
                         '<span>' + statusHtml + ' ◇ ' + s.mainOwned + '/' + s.mainTotal + '</span>' +
@@ -1016,9 +891,8 @@
                     }
                 });
                 
-                if (isOnlyThis) {
-                    selectAllExp();
-                } else {
+                if (isOnlyThis) { selectAllExp(); }
+                else {
                     EXP_ORDER.forEach(function(e) { selectedExps[e] = (e === exp); });
                     document.querySelectorAll("#expCheckboxList input").forEach(function(cb) {
                         cb.checked = (cb.dataset.exp === exp);
@@ -1096,9 +970,7 @@
             var expA = "", expB = "";
             a.exps.forEach(function(e) { if (selectedExps[e] && !expA) expA = e; });
             b.exps.forEach(function(e) { if (selectedExps[e] && !expB) expB = e; });
-            
             if (expA !== expB) return EXP_ORDER.indexOf(expA) - EXP_ORDER.indexOf(expB);
-            
             return (parseInt(a.nums[expA]) || 999) - (parseInt(b.nums[expB]) || 999);
         });
         
@@ -1115,22 +987,12 @@
             var amountHtml = card.owned ? '<span class="card-amount">x' + card.amount + '</span>' : '<span></span>';
             
             div.innerHTML = '<div class="card-img-container">' +
-                    '<img class="card-img" src="' + card.img + '" alt="' + card.name + '" loading="lazy">' +
-                    '<div class="card-badges">' +
-                        amountHtml +
-                        '<span class="card-rarity rarity-' + card.rarity + '">' + card.raritySymbol + '</span>' +
-                    '</div>' +
-                    '<span class="card-type-badge ' + (card.isMain ? 'type-main' : 'type-special') + '">' +
-                        (card.isMain ? '◇' : '★') +
-                    '</span>' +
-                '</div>' +
-                '<div class="card-info">' +
-                    '<div class="card-name">' + card.name + '</div>' +
-                    '<div class="card-details">' +
-                        '<span>#' + num + '</span>' +
-                        '<span>' + expToShow + '</span>' +
-                    '</div>' +
-                '</div>';
+                '<img class="card-img" src="' + card.img + '" alt="' + card.name + '" loading="lazy">' +
+                '<div class="card-badges">' + amountHtml +
+                '<span class="card-rarity rarity-' + card.rarity + '">' + card.raritySymbol + '</span></div>' +
+                '<span class="card-type-badge ' + (card.isMain ? 'type-main' : 'type-special') + '">' + (card.isMain ? '◇' : '★') + '</span>' +
+                '</div><div class="card-info"><div class="card-name">' + card.name + '</div>' +
+                '<div class="card-details"><span>#' + num + '</span><span>' + expToShow + '</span></div></div>';
             
             div.addEventListener("click", function() { showCardModal(card); });
             grid.appendChild(div);
@@ -1145,44 +1007,27 @@
             return '<span class="modal-exp-tag">' + e + ' #' + card.nums[e] + '</span>';
         }).join("");
         
-        var typeInfo = card.type ? '<p style="margin-bottom: 10px;">Type: <strong>' + card.type + '</strong>' + (card.hp ? ' | HP ' + card.hp : '') + '</p>' : '';
-        
-        var statusText = card.owned 
-            ? '✅ Possédée (x' + card.amount + ')' 
-            : '❌ Carte manquante';
+        var typeInfo = card.type ? '<p style="margin-bottom:10px">Type: <strong>' + card.type + '</strong>' + (card.hp ? ' | HP ' + card.hp : '') + '</p>' : '';
+        var statusText = card.owned ? '✅ Possédée (x' + card.amount + ')' : '❌ Carte manquante';
         
         content.innerHTML = '<button class="modal-close" onclick="closeModal()">×</button>' +
             '<img class="modal-card-img ' + (card.owned ? '' : 'missing') + '" src="' + card.img + '" alt="' + card.name + '">' +
             '<h2 class="modal-title">' + card.name + '</h2>' +
-            '<div class="modal-rarity">' +
-                '<span class="card-rarity rarity-' + card.rarity + '" style="font-size: 16px;">' + card.raritySymbol + '</span>' +
-                '<span>' + card.rarityName + '</span>' +
-                '<span style="color: ' + (card.isMain ? 'var(--success)' : 'var(--accent)') + '">' +
-                    '(' + (card.isMain ? 'Principale' : 'Spéciale') + ')' +
-                '</span>' +
-            '</div>' +
-            typeInfo +
-            '<div class="modal-exps">' +
-                '<strong>Extensions:</strong><br>' + expsHtml +
-            '</div>' +
-            '<div class="modal-status ' + (card.owned ? 'owned' : 'missing') + '">' +
-                statusText +
-            '</div>';
+            '<div class="modal-rarity"><span class="card-rarity rarity-' + card.rarity + '" style="font-size:16px">' + card.raritySymbol + '</span>' +
+            '<span>' + card.rarityName + '</span><span style="color:' + (card.isMain ? 'var(--success)' : 'var(--accent)') + '">(' + (card.isMain ? 'Principale' : 'Spéciale') + ')</span></div>' +
+            typeInfo + '<div class="modal-exps"><strong>Extensions:</strong><br>' + expsHtml + '</div>' +
+            '<div class="modal-status ' + (card.owned ? 'owned' : 'missing') + '">' + statusText + '</div>';
         
         modal.classList.add("active");
     }
     
-    function closeModal() {
-        document.getElementById("cardModal").classList.remove("active");
-    }
+    function closeModal() { document.getElementById("cardModal").classList.remove("active"); }
     
     document.getElementById("cardModal").addEventListener("click", function(e) {
         if (e.target.id === "cardModal") closeModal();
     });
     
-    document.addEventListener("keydown", function(e) {
-        if (e.key === "Escape") closeModal();
-    });
+    document.addEventListener("keydown", function(e) { if (e.key === "Escape") closeModal(); });
     
     loadData();
     </script>
