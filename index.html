@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎴 Pokemon TCG Pocket - Collection Toorio</title>
+    <link rel="preconnect" href="https://assets.pokemon-zone.com">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: rgba(255,255,255,0.08);
+            --accent: #f39c12;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --text: #fff;
+            --text-muted: #aaa;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: var(--text);
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .loading-screen.hidden { display: none; }
+        
+        .loading-spinner {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .loading-text { color: var(--text-muted); font-size: 16px; }
+        
+        .header {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .header-content { max-width: 1600px; margin: 0 auto; }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .player-info { display: flex; align-items: center; gap: 12px; }
+        
+        .player-avatar {
+            width: 55px; height: 55px;
+            border-radius: 50%;
+            border: 3px solid var(--accent);
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+            object-fit: cover;
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+        }
+        
+        .player-name { font-size: 22px; font-weight: bold; }
+        .player-level { color: var(--accent); font-size: 13px; }
+        
+        .global-stats { display: flex; gap: 15px; }
+        
+        .stat-box {
+            text-align: center;
+            padding: 12px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            min-width: 100px;
+        }
+        
+        .stat-value { font-size: 24px; font-weight: bold; }
+        .stat-value.success { color: var(--success); }
+        .stat-value.danger { color: var(--danger); }
+        .stat-value.accent { color: var(--accent); }
+        .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        
+        .filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group { display: flex; align-items: center; gap: 6px; }
+        .filter-group label { font-size: 12px; color: var(--text-muted); }
+        
+        select, input[type="text"] {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+        }
+        
+        select:focus, input:focus { outline: none; border-color: var(--accent); }
+        
+        .toggle-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+        
+        .toggle-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        
+        .toggle-btn:hover { background: rgba(255,255,255,0.2); }
+        .toggle-btn.active { background: var(--accent); }
+        
+        .exp-filter-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .exp-filter-btn:hover { background: rgba(255,255,255,0.2); }
+        
+        .exp-filter-btn .count {
+            background: var(--accent);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+        
+        .exp-filter-popup {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-primary);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 200;
+            min-width: 320px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .exp-filter-popup.active { display: block; }
+        
+        .exp-filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .exp-filter-header h4 { font-size: 14px; }
+        
+        .exp-filter-actions { display: flex; gap: 8px; }
+        
+        .exp-filter-actions button {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        
+        .exp-filter-actions button:hover { background: rgba(255,255,255,0.2); }
+        .exp-filter-actions button.select-all { background: var(--success); }
+        .exp-filter-actions button.select-none { background: var(--danger); }
+        
+        .exp-checkbox-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .exp-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        
+        .exp-checkbox-item:hover { background: rgba(255,255,255,0.1); }
+        
+        .exp-checkbox-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+        
+        .exp-checkbox-item .exp-label { flex: 1; }
+        .exp-checkbox-item .exp-code { color: var(--text-muted); font-size: 10px; }
+        .exp-checkbox-item.complete .exp-label { color: var(--success); }
+        
+        .exp-filter-container { position: relative; }
+        
+        .progress-section {
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+        }
+        
+        .progress-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            color: var(--text-muted);
+        }
+        
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .progress-item:hover { background: rgba(255,255,255,0.1); }
+        .progress-item.selected { border-color: var(--accent); background: rgba(243, 156, 18, 0.1); }
+        .progress-item.complete { border-color: var(--success); }
+        .progress-item.excluded { opacity: 0.4; }
+        
+        .exp-icon { font-size: 24px; width: 40px; text-align: center; }
+        .exp-info { flex: 1; }
+        .exp-name { font-weight: bold; font-size: 14px; margin-bottom: 4px; }
+        .exp-name .exp-code { color: var(--text-muted); font-weight: normal; font-size: 12px; }
+        
+        .progress-bar-container { display: flex; gap: 4px; margin-bottom: 6px; }
+        
+        .progress-bar {
+            flex: 1;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+        .progress-fill.main { background: var(--success); }
+        .progress-fill.special { background: var(--accent); }
+        
+        .exp-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        
+        .exp-stats .complete-badge {
+            background: var(--success);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        .exp-stats .missing { color: var(--danger); }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+        .legend-dot.main { background: var(--success); }
+        .legend-dot.special { background: var(--accent); }
+        
+        .cards-container { padding: 20px; max-width: 1600px; margin: 0 auto; }
+        
+        .cards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .cards-count { font-size: 16px; color: var(--text-muted); }
+        
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            border: 2px solid transparent;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        
+        .card.owned { border-color: var(--success); }
+        .card.missing { border-color: rgba(255,255,255,0.1); }
+        
+        .card-img-container {
+            position: relative;
+            padding-top: 140%;
+            background: #0a0a15;
+        }
+        
+        .card-img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: contain;
+            transition: filter 0.3s;
+        }
+        
+        .card.missing .card-img { filter: grayscale(100%) brightness(0.5); }
+        .card.missing:hover .card-img { filter: grayscale(50%) brightness(0.7); }
+        
+        .card-badges {
+            position: absolute;
+            top: 6px; left: 6px; right: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .card-amount {
+            background: var(--success);
+            color: #fff;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .card-rarity {
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        
+        .rarity-C { background: #7f8c8d; color: #fff; }
+        .rarity-U { background: #27ae60; color: #fff; }
+        .rarity-R { background: #3498db; color: #fff; }
+        .rarity-RR { background: #9b59b6; color: #fff; }
+        .rarity-AR { background: linear-gradient(135deg, #f39c12, #e67e22); color: #fff; }
+        .rarity-SR { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #333; }
+        .rarity-SAR { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; }
+        .rarity-SSR { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; }
+        .rarity-UR { background: linear-gradient(135deg, #f1c40f, #fff, #f1c40f); color: #333; }
+        .rarity-IM { background: linear-gradient(135deg, #e74c3c, #f39c12, #f1c40f); color: #fff; }
+        .rarity-S { background: linear-gradient(135deg, #ecf0f1, #bdc3c7); color: #333; }
+        
+        .card-info { padding: 10px; }
+        
+        .card-name {
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        
+        .card-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        
+        .card-type-badge {
+            position: absolute;
+            bottom: 8px; right: 8px;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.6);
+        }
+        
+        .type-main { color: var(--success); }
+        .type-special { color: var(--accent); }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.active { display: flex; }
+        
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 15px; right: 15px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .modal-card-img {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-card-img.missing { filter: grayscale(100%) brightness(0.6); }
+        
+        .modal-title { font-size: 22px; margin-bottom: 10px; }
+        
+        .modal-rarity {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-exps { margin-bottom: 15px; }
+        
+        .modal-exp-tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            margin: 3px;
+            font-size: 13px;
+        }
+        
+        .modal-status {
+            font-size: 18px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .modal-status.owned { background: rgba(46, 204, 113, 0.2); color: var(--success); }
+        .modal-status.missing { background: rgba(231, 76, 60, 0.2); color: var(--danger); }
+        
+        .update-section {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .update-section h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+        
+        .update-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .update-card {
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid;
+        }
+        
+        .update-card.collection {
+            background: rgba(46, 204, 113, 0.1);
+            border-color: var(--success);
+        }
+        
+        .update-card.extensions {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498db;
+        }
+        
+        .update-card h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .update-card.collection h3 { color: var(--success); }
+        .update-card.extensions h3 { color: #3498db; }
+        
+        .update-card .icon { font-size: 24px; }
+        
+        .update-card p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .update-card ol {
+            margin-left: 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        
+        .update-card code {
+            background: rgba(255,255,255,0.15);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .update-card .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        .update-card .file-info strong { color: var(--text); }
+        
+        @media (max-width: 768px) {
+            .header-top { flex-direction: column; align-items: stretch; }
+            .global-stats { justify-content: space-around; }
+            .stat-box { padding: 10px 15px; min-width: 80px; }
+            .stat-value { font-size: 20px; }
+            .filters { justify-content: center; }
+            .cards-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
+            .progress-grid { grid-template-columns: 1fr; }
+            .update-cards { grid-template-columns: 1fr; }
+            .exp-filter-popup { min-width: 280px; }
+            .exp-checkbox-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Chargement de la collection...</div>
+    </div>
+
+    <div class="header">
+        <div class="header-content">
+            <div class="header-top">
+                <div class="player-info">
+                    <img class="player-avatar" id="playerAvatar" src="" alt="Avatar">
+                    <div>
+                        <div class="player-name" id="playerName">Chargement...</div>
+                        <div class="player-level" id="playerLevel"></div>
+                    </div>
+                </div>
+                <div class="global-stats">
+                    <div class="stat-box">
+                        <div class="stat-value success" id="mainComplete">-</div>
+                        <div class="stat-label">Sets complets (◇)</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value accent" id="totalOwned">-</div>
+                        <div class="stat-label">Cartes possédées</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value danger" id="totalMissing">-</div>
+                        <div class="stat-label">Manquantes</div>
+                    </div>
+                </div>
+            </div>
+            <div class="filters">
+                <div class="filter-group exp-filter-container">
+                    <label>Extensions:</label>
+                    <button class="exp-filter-btn" id="expFilterBtn">
+                        <span>📦 Sélectionner</span>
+                        <span class="count" id="expCount">0/0</span>
+                    </button>
+                    <div class="exp-filter-popup" id="expFilterPopup">
+                        <div class="exp-filter-header">
+                            <h4>📦 Extensions</h4>
+                            <div class="exp-filter-actions">
+                                <button class="select-all" onclick="selectAllExp()">✓ Toutes</button>
+                                <button class="select-none" onclick="selectNoneExp()">✗ Aucune</button>
+                            </div>
+                        </div>
+                        <div class="exp-checkbox-list" id="expCheckboxList"></div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Rareté:</label>
+                    <select id="filterRarity">
+                        <option value="all">Toutes</option>
+                        <optgroup label="─── Principales (◇) ───">
+                            <option value="C">◇ Common</option>
+                            <option value="U">◇◇ Uncommon</option>
+                            <option value="R">◇◇◇ Rare</option>
+                            <option value="RR">◇◇◇◇ Double Rare</option>
+                        </optgroup>
+                        <optgroup label="─── Spéciales (★) ───">
+                            <option value="AR">★ Art Rare</option>
+                            <option value="SR">★★ Super Rare</option>
+                            <option value="SAR">★★ Special Art</option>
+                            <option value="SSR">★★★ Shiny Rare</option>
+                            <option value="UR">👑 Ultra Rare</option>
+                            <option value="IM">👑 Immersive</option>
+                            <option value="S">✦ Shiny</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type:</label>
+                    <select id="filterType">
+                        <option value="all">Toutes</option>
+                        <option value="main">◇ Principales seulement</option>
+                        <option value="special">★ Spéciales seulement</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <input type="text" id="searchInput" placeholder="🔍 Rechercher...">
+                </div>
+                <div class="toggle-btns">
+                    <button class="toggle-btn active" data-filter="all">Toutes</button>
+                    <button class="toggle-btn" data-filter="owned">✅ Possédées</button>
+                    <button class="toggle-btn" data-filter="missing">❌ Manquantes</button>
+                    <button class="toggle-btn" data-filter="dupes">🔄 Doublons</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="progress-section">
+        <h2>📊 Progression par Extension <small style="font-size: 12px; color: var(--text-muted);">(cliquer pour filtrer)</small></h2>
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot main"></div>
+                <span>Cartes principales (◇) - comptent pour 100%</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot special"></div>
+                <span>Cartes spéciales (★👑) - bonus</span>
+            </div>
+        </div>
+        <div class="progress-grid" id="progressGrid"></div>
+    </div>
+    
+    <div class="cards-container">
+        <div class="cards-header">
+            <div class="cards-count" id="cardsCount">Chargement...</div>
+        </div>
+        <div class="cards-grid" id="cardsGrid"></div>
+    </div>
+    
+    <div class="update-section">
+        <h2>🔄 Comment mettre à jour ?</h2>
+        <div class="update-cards">
+            <div class="update-card collection">
+                <h3><span class="icon">📦</span> Mettre à jour ma collection</h3>
+                <p>Quand tu obtiens de nouvelles cartes dans le jeu.</p>
+                <ol>
+                    <li>Va sur <strong>Pokemon Zone</strong> → synchronise</li>
+                    <li><strong>DevTools</strong> (F12) → Network → Fetch/XHR</li>
+                    <li>Copie la réponse de <code>mine/</code></li>
+                    <li>Remplace <code>data/mine.json</code> dans GitHub</li>
+                    <li>Vercel redéploie automatiquement ! 🚀</li>
+                </ol>
+            </div>
+            
+            <div class="update-card extensions">
+                <h3><span class="icon">🆕</span> Nouvelle extension</h3>
+                <p>Quand une nouvelle extension sort (B2, etc.)</p>
+                <ol>
+                    <li>Va sur <strong>Pokemon Zone</strong></li>
+                    <li>Copie la réponse de <code>card-data/</code></li>
+                    <li>Remplace <code>data/card-data.json</code></li>
+                    <li>+ Met à jour <code>data/mine.json</code></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="cardModal">
+        <div class="modal-content" id="modalContent">
+            <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+    </div>
+    
+    <script>
+    var DATA = { player: {}, cards: [], stats: {} };
+    
+    var EXP_NAMES = {
+        "A1": "Genetic Apex", "A1a": "Mythical Island",
+        "A2": "Space-Time Smackdown", "A2a": "Triumphant Light", "A2b": "Shining Revelry",
+        "A3": "Celestial Guardians", "A3a": "Extradimensional Crisis", "A3b": "Eevee Grove",
+        "A4": "Wisdom of Sea and Sky", "A4a": "Secluded Springs", "A4b": "Deluxe Pack: ex",
+        "B1": "Mega Rising", "B1a": "Crimson Blaze",
+        "PROMO-A": "Promos A", "PROMO-B": "Promos B"
+    };
+    
+    var EXP_ORDER = ["A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b", "B1", "B1a", "PROMO-A", "PROMO-B"];
+    
+    var MAIN_RARITIES = ["C", "U", "R", "RR"];
+    var RARITY_SYMBOLS = {
+        "C": "◇", "U": "◇◇", "R": "◇◇◇", "RR": "◇◇◇◇",
+        "AR": "★", "SR": "★★", "SAR": "★★", "SSR": "★★★",
+        "UR": "👑", "IM": "👑", "S": "✦"
+    };
+    var RARITY_NAMES = {
+        "C": "Common", "U": "Uncommon", "R": "Rare", "RR": "Double Rare",
+        "AR": "Art Rare", "SR": "Super Rare", "SAR": "Special Art Rare",
+        "SSR": "Shiny Super Rare", "UR": "Ultra Rare", "IM": "Immersive", "S": "Shiny"
+    };
+    
+    var currentFilter = "all";
+    var selectedExps = {};
+    var currentRarity = "all";
+    var currentType = "all";
+    var searchQuery = "";
+    
+    async function loadData() {
+        try {
+            var mineRes = await fetch("data/mine.json");
+            var mineData = await mineRes.json();
+            
+            var cardDataRes = await fetch("data/card-data.json");
+            var cardData = await cardDataRes.json();
+            
+            processData(mineData, cardData);
+            
+            document.getElementById("loadingScreen").classList.add("hidden");
+            init();
+        } catch (err) {
+            console.error("Erreur chargement:", err);
+            document.querySelector(".loading-text").textContent = "Erreur de chargement: " + err.message;
+        }
+    }
+    
+    function processData(mineData, cardData) {
+        var player = mineData.data.player;
+        DATA.player = {
+            name: player.name,
+            level: player.level,
+            avatarUrl: player.icon ? player.icon.assetUrl : null
+        };
+        
+        var ownedMap = {};
+        mineData.data.cards.forEach(function(c) {
+            ownedMap[c.id] = (ownedMap[c.id] || 0) + 1;
+        });
+        
+        var allCards = cardData.data;
+        var cards = [];
+        var stats = {};
+        
+        allCards.forEach(function(card) {
+            var rarity = card.rarity || "C";
+            var isMain = MAIN_RARITIES.indexOf(rarity) !== -1;
+            var owned = ownedMap[card.id] || 0;
+            
+            var exps = [];
+            var nums = {};
+            if (card.sets) {
+                card.sets.forEach(function(s) {
+                    var expCode = s.id.split("_")[0];
+                    exps.push(expCode);
+                    nums[expCode] = s.number;
+                    
+                    if (!stats[expCode]) {
+                        stats[expCode] = { mainOwned: 0, mainTotal: 0, specialOwned: 0, specialTotal: 0 };
+                    }
+                    if (isMain) {
+                        stats[expCode].mainTotal++;
+                        if (owned > 0) stats[expCode].mainOwned++;
+                    } else {
+                        stats[expCode].specialTotal++;
+                        if (owned > 0) stats[expCode].specialOwned++;
+                    }
+                });
+            }
+            
+            cards.push({
+                id: card.id,
+                name: card.name,
+                rarity: rarity,
+                raritySymbol: RARITY_SYMBOLS[rarity] || "?",
+                rarityName: RARITY_NAMES[rarity] || rarity,
+                isMain: isMain,
+                owned: owned > 0,
+                amount: owned,
+                img: card.image,
+                exps: exps,
+                nums: nums,
+                type: card.type,
+                hp: card.hp
+            });
+        });
+        
+        DATA.cards = cards;
+        DATA.stats = stats;
+        
+        EXP_ORDER.forEach(function(exp) {
+            if (stats[exp]) selectedExps[exp] = true;
+        });
+    }
+    
+    function init() {
+        document.getElementById("playerName").textContent = DATA.player.name || "Dresseur";
+        document.getElementById("playerLevel").textContent = "Niveau " + (DATA.player.level || "?");
+        
+        if (DATA.player.avatarUrl) {
+            document.getElementById("playerAvatar").src = DATA.player.avatarUrl;
+        }
+        
+        var completeCount = 0;
+        var totalExp = 0;
+        
+        EXP_ORDER.forEach(function(exp) {
+            var s = DATA.stats[exp];
+            if (s) {
+                totalExp++;
+                if (s.mainOwned >= s.mainTotal) completeCount++;
+            }
+        });
+        
+        document.getElementById("mainComplete").textContent = completeCount + "/" + totalExp;
+        
+        var totalOwned = DATA.cards.filter(function(c) { return c.owned; }).length;
+        document.getElementById("totalOwned").textContent = totalOwned;
+        document.getElementById("totalMissing").textContent = DATA.cards.length - totalOwned;
+        
+        buildExpCheckboxes();
+        buildProgressBars();
+        setupEvents();
+        renderCards();
+        updateExpCount();
+    }
+    
+    function buildExpCheckboxes() {
+        var list = document.getElementById("expCheckboxList");
+        list.innerHTML = "";
+        
+        EXP_ORDER.forEach(function(exp) {
+            var s = DATA.stats[exp];
+            if (!s) return;
+            
+            var isComplete = s.mainOwned >= s.mainTotal;
+            
+            var item = document.createElement("label");
+            item.className = "exp-checkbox-item" + (isComplete ? " complete" : "");
+            item.innerHTML = '<input type="checkbox" checked data-exp="' + exp + '">' +
+                '<span class="exp-label">' + (isComplete ? "✅ " : "") + EXP_NAMES[exp] + '</span>' +
+                '<span class="exp-code">' + exp + '</span>';
+            
+            item.querySelector("input").addEventListener("change", function(e) {
+                selectedExps[exp] = e.target.checked;
+                updateExpCount();
+                updateProgressBarsVisibility();
+                renderCards();
+            });
+            
+            list.appendChild(item);
+        });
+    }
+    
+    function selectAllExp() {
+        EXP_ORDER.forEach(function(exp) { if (DATA.stats[exp]) selectedExps[exp] = true; });
+        document.querySelectorAll("#expCheckboxList input").forEach(function(cb) { cb.checked = true; });
+        updateExpCount();
+        updateProgressBarsVisibility();
+        renderCards();
+    }
+    
+    function selectNoneExp() {
+        EXP_ORDER.forEach(function(exp) { selectedExps[exp] = false; });
+        document.querySelectorAll("#expCheckboxList input").forEach(function(cb) { cb.checked = false; });
+        updateExpCount();
+        updateProgressBarsVisibility();
+        renderCards();
+    }
+    
+    function updateExpCount() {
+        var count = 0, total = 0;
+        EXP_ORDER.forEach(function(exp) {
+            if (DATA.stats[exp]) { total++; if (selectedExps[exp]) count++; }
+        });
+        document.getElementById("expCount").textContent = count + "/" + total;
+    }
+    
+    function updateProgressBarsVisibility() {
+        document.querySelectorAll(".progress-item").forEach(function(item) {
+            item.classList.toggle("excluded", !selectedExps[item.dataset.exp]);
+        });
+    }
+    
+    function buildProgressBars() {
+        var grid = document.getElementById("progressGrid");
+        grid.innerHTML = "";
+        
+        EXP_ORDER.forEach(function(exp) {
+            var s = DATA.stats[exp];
+            if (!s) return;
+            
+            var mainPct = s.mainTotal > 0 ? (s.mainOwned / s.mainTotal * 100) : 0;
+            var specialPct = s.specialTotal > 0 ? (s.specialOwned / s.specialTotal * 100) : 0;
+            var isComplete = mainPct >= 100;
+            var mainMissing = s.mainTotal - s.mainOwned;
+            
+            var item = document.createElement("div");
+            item.className = "progress-item" + (isComplete ? " complete" : "");
+            item.dataset.exp = exp;
+            
+            var statusHtml = isComplete 
+                ? '<span class="complete-badge">100% COMPLET</span>' 
+                : '<span class="missing">' + mainMissing + ' manquante' + (mainMissing > 1 ? 's' : '') + '</span>';
+            
+            item.innerHTML = '<div class="exp-icon">' + (isComplete ? '✅' : '📦') + '</div>' +
+                '<div class="exp-info">' +
+                    '<div class="exp-name">' + EXP_NAMES[exp] + ' <span class="exp-code">(' + exp + ')</span></div>' +
+                    '<div class="progress-bar-container">' +
+                        '<div class="progress-bar" title="Principales">' +
+                            '<div class="progress-fill main" style="width: ' + mainPct + '%"></div>' +
+                        '</div>' +
+                        '<div class="progress-bar" style="max-width: 60px;" title="Spéciales">' +
+                            '<div class="progress-fill special" style="width: ' + specialPct + '%"></div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="exp-stats">' +
+                        '<span>' + statusHtml + ' ◇ ' + s.mainOwned + '/' + s.mainTotal + '</span>' +
+                        '<span>★ ' + s.specialOwned + '/' + s.specialTotal + '</span>' +
+                    '</div>' +
+                '</div>';
+            
+            item.addEventListener("click", function() {
+                var isOnlyThis = true;
+                EXP_ORDER.forEach(function(e) {
+                    if (DATA.stats[e]) {
+                        if (e === exp) { if (!selectedExps[e]) isOnlyThis = false; }
+                        else { if (selectedExps[e]) isOnlyThis = false; }
+                    }
+                });
+                
+                if (isOnlyThis) {
+                    selectAllExp();
+                } else {
+                    EXP_ORDER.forEach(function(e) { selectedExps[e] = (e === exp); });
+                    document.querySelectorAll("#expCheckboxList input").forEach(function(cb) {
+                        cb.checked = (cb.dataset.exp === exp);
+                    });
+                    updateExpCount();
+                    updateProgressBarsVisibility();
+                    renderCards();
+                }
+            });
+            
+            grid.appendChild(item);
+        });
+    }
+    
+    function setupEvents() {
+        document.querySelectorAll(".toggle-btn").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                document.querySelectorAll(".toggle-btn").forEach(function(b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                currentFilter = btn.dataset.filter;
+                renderCards();
+            });
+        });
+        
+        document.getElementById("expFilterBtn").addEventListener("click", function(e) {
+            e.stopPropagation();
+            document.getElementById("expFilterPopup").classList.toggle("active");
+        });
+        
+        document.addEventListener("click", function(e) {
+            var popup = document.getElementById("expFilterPopup");
+            var btn = document.getElementById("expFilterBtn");
+            if (!popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                popup.classList.remove("active");
+            }
+        });
+        
+        document.getElementById("filterRarity").addEventListener("change", function(e) {
+            currentRarity = e.target.value;
+            renderCards();
+        });
+        
+        document.getElementById("filterType").addEventListener("change", function(e) {
+            currentType = e.target.value;
+            renderCards();
+        });
+        
+        document.getElementById("searchInput").addEventListener("input", function(e) {
+            searchQuery = e.target.value.toLowerCase();
+            renderCards();
+        });
+    }
+    
+    function renderCards() {
+        var grid = document.getElementById("cardsGrid");
+        grid.innerHTML = "";
+        
+        var filtered = DATA.cards.filter(function(card) {
+            if (currentFilter === "owned" && !card.owned) return false;
+            if (currentFilter === "missing" && card.owned) return false;
+            if (currentFilter === "dupes" && (!card.owned || card.amount < 2)) return false;
+            
+            var inSelectedExp = false;
+            card.exps.forEach(function(exp) { if (selectedExps[exp]) inSelectedExp = true; });
+            if (!inSelectedExp) return false;
+            
+            if (currentRarity !== "all" && card.rarity !== currentRarity) return false;
+            if (currentType === "main" && !card.isMain) return false;
+            if (currentType === "special" && card.isMain) return false;
+            if (searchQuery && card.name.toLowerCase().indexOf(searchQuery) === -1) return false;
+            return true;
+        });
+        
+        filtered.sort(function(a, b) {
+            var expA = "", expB = "";
+            a.exps.forEach(function(e) { if (selectedExps[e] && !expA) expA = e; });
+            b.exps.forEach(function(e) { if (selectedExps[e] && !expB) expB = e; });
+            
+            if (expA !== expB) return EXP_ORDER.indexOf(expA) - EXP_ORDER.indexOf(expB);
+            
+            return (parseInt(a.nums[expA]) || 999) - (parseInt(b.nums[expB]) || 999);
+        });
+        
+        document.getElementById("cardsCount").textContent = filtered.length + " cartes affichées";
+        
+        filtered.forEach(function(card) {
+            var expToShow = card.exps[0] || "?";
+            card.exps.forEach(function(e) { if (selectedExps[e]) expToShow = e; });
+            var num = card.nums[expToShow] || "?";
+            
+            var div = document.createElement("div");
+            div.className = "card " + (card.owned ? "owned" : "missing");
+            
+            var amountHtml = card.owned ? '<span class="card-amount">x' + card.amount + '</span>' : '<span></span>';
+            
+            div.innerHTML = '<div class="card-img-container">' +
+                    '<img class="card-img" src="' + card.img + '" alt="' + card.name + '" loading="lazy">' +
+                    '<div class="card-badges">' +
+                        amountHtml +
+                        '<span class="card-rarity rarity-' + card.rarity + '">' + card.raritySymbol + '</span>' +
+                    '</div>' +
+                    '<span class="card-type-badge ' + (card.isMain ? 'type-main' : 'type-special') + '">' +
+                        (card.isMain ? '◇' : '★') +
+                    '</span>' +
+                '</div>' +
+                '<div class="card-info">' +
+                    '<div class="card-name">' + card.name + '</div>' +
+                    '<div class="card-details">' +
+                        '<span>#' + num + '</span>' +
+                        '<span>' + expToShow + '</span>' +
+                    '</div>' +
+                '</div>';
+            
+            div.addEventListener("click", function() { showCardModal(card); });
+            grid.appendChild(div);
+        });
+    }
+    
+    function showCardModal(card) {
+        var modal = document.getElementById("cardModal");
+        var content = document.getElementById("modalContent");
+        
+        var expsHtml = card.exps.map(function(e) {
+            return '<span class="modal-exp-tag">' + e + ' #' + card.nums[e] + '</span>';
+        }).join("");
+        
+        var typeInfo = card.type ? '<p style="margin-bottom: 10px;">Type: <strong>' + card.type + '</strong>' + (card.hp ? ' | HP ' + card.hp : '') + '</p>' : '';
+        
+        var statusText = card.owned 
+            ? '✅ Possédée (x' + card.amount + ')' 
+            : '❌ Carte manquante';
+        
+        content.innerHTML = '<button class="modal-close" onclick="closeModal()">×</button>' +
+            '<img class="modal-card-img ' + (card.owned ? '' : 'missing') + '" src="' + card.img + '" alt="' + card.name + '">' +
+            '<h2 class="modal-title">' + card.name + '</h2>' +
+            '<div class="modal-rarity">' +
+                '<span class="card-rarity rarity-' + card.rarity + '" style="font-size: 16px;">' + card.raritySymbol + '</span>' +
+                '<span>' + card.rarityName + '</span>' +
+                '<span style="color: ' + (card.isMain ? 'var(--success)' : 'var(--accent)') + '">' +
+                    '(' + (card.isMain ? 'Principale' : 'Spéciale') + ')' +
+                '</span>' +
+            '</div>' +
+            typeInfo +
+            '<div class="modal-exps">' +
+                '<strong>Extensions:</strong><br>' + expsHtml +
+            '</div>' +
+            '<div class="modal-status ' + (card.owned ? 'owned' : 'missing') + '">' +
+                statusText +
+            '</div>';
+        
+        modal.classList.add("active");
+    }
+    
+    function closeModal() {
+        document.getElementById("cardModal").classList.remove("active");
+    }
+    
+    document.getElementById("cardModal").addEventListener("click", function(e) {
+        if (e.target.id === "cardModal") closeModal();
+    });
+    
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") closeModal();
+    });
+    
+    loadData();
+    </script>
+</body>
+</html>
