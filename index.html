@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎴 Pokemon TCG Pocket - Collection Toorio</title>
+    <link rel="preconnect" href="https://assets.pokemon-zone.com">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: rgba(255,255,255,0.08);
+            --accent: #f39c12;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --text: #fff;
+            --text-muted: #aaa;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: var(--text);
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-screen.hidden { display: none; }
+        .loading-spinner {
+            width: 60px; height: 60px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: var(--text-muted); font-size: 16px; }
+        
+        /* Header */
+        .header {
+            background: rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .header-content { max-width: 1600px; margin: 0 auto; }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .player-avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+            object-fit: cover;
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+        }
+        .player-name { font-size: 18px; font-weight: bold; }
+        .player-level { color: var(--accent); font-size: 12px; }
+        
+        .global-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+        .stat-box {
+            text-align: center;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            min-width: 70px;
+        }
+        .stat-value { font-size: 18px; font-weight: bold; }
+        .stat-value.success { color: var(--success); }
+        .stat-value.danger { color: var(--danger); }
+        .stat-value.accent { color: var(--accent); }
+        .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+        
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-group { display: flex; align-items: center; gap: 4px; }
+        .filter-group label { font-size: 11px; color: var(--text-muted); display: none; }
+        
+        select, input[type="text"] {
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 13px;
+            max-width: 120px;
+        }
+        select:focus, input:focus { outline: none; border-color: var(--accent); }
+        
+        .toggle-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+        .toggle-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            white-space: nowrap;
+        }
+        .toggle-btn:hover { background: rgba(255,255,255,0.2); }
+        .toggle-btn.active { background: var(--accent); }
+        
+        .exp-filter-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .exp-filter-btn:hover { background: rgba(255,255,255,0.2); }
+        .exp-filter-btn .count {
+            background: var(--accent);
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+        }
+        
+        /* Extension Filter Popup */
+        .exp-filter-container { position: relative; }
+        .exp-filter-popup {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-primary);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 12px;
+            z-index: 200;
+            min-width: 280px;
+            max-width: 90vw;
+            max-height: 60vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .exp-filter-popup.active { display: block; }
+        .exp-filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .exp-filter-header h4 { font-size: 13px; }
+        .exp-filter-actions { display: flex; gap: 6px; }
+        .exp-filter-actions button {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+        .exp-filter-actions button:hover { background: rgba(255,255,255,0.2); }
+        .exp-checkbox-list { display: flex; flex-direction: column; gap: 6px; }
+        .exp-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .exp-checkbox-item:hover { background: rgba(255,255,255,0.05); }
+        .exp-checkbox-item input { width: 16px; height: 16px; accent-color: var(--accent); }
+        .exp-checkbox-item label { font-size: 12px; cursor: pointer; flex: 1; }
+        
+        /* Progress Section */
+        .progress-section {
+            padding: 16px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .section-title {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: var(--text-muted);
+        }
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+        }
+        .progress-item {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .progress-item:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .progress-item.complete { border-color: var(--success); }
+        .progress-item.excluded { opacity: 0.4; }
+        .exp-icon { font-size: 24px; }
+        .exp-info { flex: 1; min-width: 0; }
+        .exp-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .exp-code { color: var(--text-muted); font-weight: normal; }
+        .progress-bar-container { display: flex; gap: 6px; margin-bottom: 4px; }
+        .progress-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+        .progress-fill.main { background: var(--success); }
+        .progress-fill.special { background: var(--accent); }
+        .exp-stats { font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between; }
+        .complete-badge { color: var(--success); font-weight: bold; }
+        .missing { color: var(--danger); }
+        
+        /* Cards Section */
+        .cards-section {
+            padding: 16px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .cards-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .cards-count { color: var(--text-muted); font-size: 13px; }
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        
+        /* Card Item */
+        .card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+        .card.owned { border-color: var(--success); }
+        .card.missing { border-color: var(--danger); }
+        .card-img-container { position: relative; padding-top: 140%; }
+        .card-img {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+        .card.missing .card-img { filter: grayscale(1) brightness(0.5); }
+        .card-badges {
+            position: absolute;
+            top: 4px; left: 4px; right: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .card-amount {
+            background: var(--success);
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .card-rarity {
+            background: rgba(0,0,0,0.7);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 9px;
+        }
+        .rarity-C { color: #aaa; }
+        .rarity-U { color: #4fc3f7; }
+        .rarity-R { color: #ffd54f; }
+        .rarity-RR { color: #ff8a65; }
+        .rarity-AR, .rarity-SR, .rarity-SAR { color: #ba68c8; }
+        .rarity-UR, .rarity-IM { color: #e91e63; }
+        .card-type-badge {
+            position: absolute;
+            bottom: 4px; right: 4px;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+        .type-main { background: var(--success); }
+        .type-special { background: var(--accent); }
+        .card-info { padding: 6px; }
+        .card-name {
+            font-size: 10px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 360px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            text-align: center;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 10px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.2); }
+        .modal-card-img {
+            width: 200px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        .modal-card-img.missing { filter: grayscale(1) brightness(0.5); }
+        .modal-title { font-size: 20px; margin-bottom: 10px; }
+        .modal-rarity { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .modal-exps { margin-bottom: 15px; }
+        .modal-exp-tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin: 3px;
+            font-size: 12px;
+        }
+        .modal-status {
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        .modal-status.owned { background: rgba(46, 204, 113, 0.2); color: var(--success); }
+        .modal-status.missing { background: rgba(231, 76, 60, 0.2); color: var(--danger); }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .header { padding: 10px 12px; }
+            .header-top { gap: 8px; margin-bottom: 10px; }
+            .player-avatar { width: 40px; height: 40px; }
+            .player-name { font-size: 16px; }
+            .stat-box { padding: 6px 10px; min-width: 60px; }
+            .stat-value { font-size: 16px; }
+            .filters { gap: 6px; }
+            .toggle-btn { padding: 6px 10px; font-size: 11px; }
+            .progress-grid { grid-template-columns: 1fr; }
+            .cards-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+            .card-name { font-size: 9px; }
+            .section-title { font-size: 14px; }
+        }
+        
+        @media (min-width: 768px) {
+            .filter-group label { display: block; }
+            .cards-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Chargement de la collection...</div>
+    </div>
+    
+    <header class="header">
+        <div class="header-content">
+            <div class="header-top">
+                <div class="player-info">
+                    <img id="playerAvatar" class="player-avatar" src="" alt="Avatar">
+                    <div>
+                        <div id="playerName" class="player-name">Chargement...</div>
+                        <div id="playerLevel" class="player-level">Niveau --</div>
+                    </div>
+                </div>
+                <div class="global-stats">
+                    <div class="stat-box">
+                        <div id="statOwned" class="stat-value success">--</div>
+                        <div class="stat-label">Possédées</div>
+                    </div>
+                    <div class="stat-box">
+                        <div id="statMissing" class="stat-value danger">--</div>
+                        <div class="stat-label">Manquantes</div>
+                    </div>
+                    <div class="stat-box">
+                        <div id="statDupes" class="stat-value accent">--</div>
+                        <div class="stat-label">Doublons</div>
+                    </div>
+                </div>
+            </div>
+            <div class="filters">
+                <div class="toggle-btns">
+                    <button class="toggle-btn active" data-filter="all">Toutes</button>
+                    <button class="toggle-btn" data-filter="owned">✅ Possédées</button>
+                    <button class="toggle-btn" data-filter="missing">❌ Manquantes</button>
+                    <button class="toggle-btn" data-filter="dupes">🔄 Doublons</button>
+                </div>
+                <div class="exp-filter-container">
+                    <button id="expFilterBtn" class="exp-filter-btn">
+                        📦 Extensions <span id="expCount" class="count">--</span>
+                    </button>
+                    <div id="expFilterPopup" class="exp-filter-popup">
+                        <div class="exp-filter-header">
+                            <h4>Filtrer par extension</h4>
+                            <div class="exp-filter-actions">
+                                <button onclick="selectAllExp()">Tout</button>
+                                <button onclick="selectNoneExp()">Aucun</button>
+                            </div>
+                        </div>
+                        <div id="expCheckboxList" class="exp-checkbox-list"></div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Rareté</label>
+                    <select id="filterRarity">
+                        <option value="all">Toutes</option>
+                        <option value="C">◇ Commune</option>
+                        <option value="U">◇◇ Peu commune</option>
+                        <option value="R">◇◇◇ Rare</option>
+                        <option value="RR">◇◇◇◇ Double Rare</option>
+                        <option value="AR">★ Art Rare</option>
+                        <option value="SR">★★ Super Rare</option>
+                        <option value="SAR">★★★ SAR</option>
+                        <option value="UR">👑 Ultra Rare</option>
+                        <option value="IM">🎭 Immersive</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Type</label>
+                    <select id="filterType">
+                        <option value="all">Tous</option>
+                        <option value="main">◇ Principales</option>
+                        <option value="special">★ Spéciales</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <input type="text" id="searchInput" placeholder="🔍 Rechercher...">
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <section class="progress-section">
+        <h2 class="section-title">📊 Progression par extension</h2>
+        <div id="progressGrid" class="progress-grid"></div>
+    </section>
+    
+    <section class="cards-section">
+        <div class="cards-header">
+            <h2 class="section-title">🎴 Cartes</h2>
+            <span id="cardsCount" class="cards-count">-- cartes</span>
+        </div>
+        <div id="cardsGrid" class="cards-grid"></div>
+    </section>
+    
+    <div id="cardModal" class="modal">
+        <div id="modalContent" class="modal-content"></div>
+    </div>
+    
+    <script>
+    var DATA = null;
+    var selectedExps = {};
+    var currentFilter = "all";
+    var currentRarity = "all";
+    var currentType = "all";
+    var searchQuery = "";
+    
+    var EXP_ORDER = ["A1", "A1a", "A2", "A2a", "A2b", "A3", "A3a", "A3b", "A4", "A4a", "A4b", "B1", "B1a", "B2", "PROMO-A", "PROMO-B"];
+    var EXP_NAMES = {
+        "A1": "Puissance Génétique",
+        "A1a": "L'Île Fabuleuse",
+        "A2": "Choc Spatio-Temporel",
+        "A2a": "Lumière Triomphale",
+        "A2b": "Réjouissances Lumineuses",
+        "A3": "Gardiens Célestes",
+        "A3a": "Crise Extradimensionnelle",
+        "A3b": "Havre d'Évoli",
+        "A4": "Sagesse des Flots et du Ciel",
+        "A4a": "Sources Isolées",
+        "A4b": "Pack Deluxe: ex",
+        "B1": "Méga Ascension",
+        "B1a": "Flamme Pourpre",
+        "B2": "Parade Fantastique",
+        "PROMO-A": "Promo A",
+        "PROMO-B": "Promo B"
+    };
+    
+    function loadData() {
+        fetch("data/card-data.json")
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                DATA = data;
+                initApp();
+            })
+            .catch(function(e) {
+                console.error("Erreur:", e);
+                document.getElementById("loadingScreen").innerHTML = '<div style="color:#e74c3c;text-align:center;padding:20px;">❌ Erreur de chargement<br><small>' + e.message + '</small></div>';
+            });
+    }
+    
+    function initApp() {
+        document.getElementById("loadingScreen").classList.add("hidden");
+        
+        // Player info
+        document.getElementById("playerName").textContent = DATA.player.name || "Joueur";
+        document.getElementById("playerLevel").textContent = "Niveau " + (DATA.player.level || "?");
+        if (DATA.player.icon) {
+            document.getElementById("playerAvatar").src = DATA.player.icon;
+        }
+        
+        // Global stats
+        var owned = 0, dupes = 0;
+        DATA.cards.forEach(function(c) {
+            if (c.owned) { owned++; if (c.amount >= 2) dupes++; }
+        });
+        document.getElementById("statOwned").textContent = owned;
+        document.getElementById("statMissing").textContent = DATA.cards.length - owned;
+        document.getElementById("statDupes").textContent = dupes;
+        
+        // Init selected exps
+        EXP_ORDER.forEach(function(exp) {
+            if (DATA.stats[exp]) selectedExps[exp] = true;
+        });
+        
+        buildExpCheckboxes();
+        buildProgressBars();
+        setupEvents();
+        renderCards();
+    }
+    
+    function buildExpCheckboxes() {
+        var list = document.getElementById("expCheckboxList");
+        list.innerHTML = "";
+        
+        EXP_ORDER.forEach(function(exp) {
+            if (!DATA.stats[exp]) return;
+            var s = DATA.stats[exp];
+            var total = s.mainOwned + s.specialOwned;
+            var max = s.mainTotal + s.specialTotal;
+            
+            var item = document.createElement("div");
+            item.className = "exp-checkbox-item";
+            item.innerHTML = '<input type="checkbox" id="exp_' + exp + '" data-exp="' + exp + '" ' + (selectedExps[exp] ? 'checked' : '') + '>' +
+                '<label for="exp_' + exp + '">' + EXP_NAMES[exp] + ' <span style="color:var(--text-muted)">(' + total + '/' + max + ')</span></label>';
+            
+            item.querySelector("input").addEventListener("change", function(e) {
+                selectedExps[exp] = e.target.checked;
+                updateExpCount();
+                updateProgressBarsVisibility();
+                renderCards();
+            });
+            
+            list.appendChild(item);
+        });
+        
+        updateExpCount();
+    }
+    
+    function selectAllExp() {
+        EXP_ORDER.forEach(function(exp) { if (DATA.stats[exp]) selectedExps[exp] = true; });
+        document.querySelectorAll("#expCheckboxList input").forEach(function(cb) { cb.checked = true; });
+        updateExpCount();
+        updateProgressBarsVisibility();
+        renderCards();
+    }
+    
+    function selectNoneExp() {
+        EXP_ORDER.forEach(function(exp) { selectedExps[exp] = false; });
+        document.querySelectorAll("#expCheckboxList input").forEach(function(cb) { cb.checked = false; });
+        updateExpCount();
+        updateProgressBarsVisibility();
+        renderCards();
+    }
+    
+    function updateExpCount() {
+        var count = 0, total = 0;
+        EXP_ORDER.forEach(function(exp) {
+            if (DATA.stats[exp]) { total++; if (selectedExps[exp]) count++; }
+        });
+        document.getElementById("expCount").textContent = count + "/" + total;
+    }
+    
+    function updateProgressBarsVisibility() {
+        document.querySelectorAll(".progress-item").forEach(function(item) {
+            item.classList.toggle("excluded", !selectedExps[item.dataset.exp]);
+        });
+    }
+    
+    function buildProgressBars() {
+        var grid = document.getElementById("progressGrid");
+        grid.innerHTML = "";
+        
+        EXP_ORDER.forEach(function(exp) {
+            var s = DATA.stats[exp];
+            if (!s) return;
+            
+            var mainPct = s.mainTotal > 0 ? (s.mainOwned / s.mainTotal * 100) : 0;
+            var specialPct = s.specialTotal > 0 ? (s.specialOwned / s.specialTotal * 100) : 0;
+            var isComplete = mainPct >= 100;
+            var mainMissing = s.mainTotal - s.mainOwned;
+            
+            var item = document.createElement("div");
+            item.className = "progress-item" + (isComplete ? " complete" : "");
+            item.dataset.exp = exp;
+            
+            var statusHtml = isComplete 
+                ? '<span class="complete-badge">✅ COMPLET</span>' 
+                : '<span class="missing">' + mainMissing + ' manquante' + (mainMissing > 1 ? 's' : '') + '</span>';
+            
+            item.innerHTML = '<div class="exp-icon">' + (isComplete ? '✅' : '📦') + '</div>' +
+                '<div class="exp-info">' +
+                    '<div class="exp-name">' + EXP_NAMES[exp] + ' <span class="exp-code">(' + exp + ')</span></div>' +
+                    '<div class="progress-bar-container">' +
+                        '<div class="progress-bar" title="Principales"><div class="progress-fill main" style="width:' + mainPct + '%"></div></div>' +
+                        '<div class="progress-bar" style="max-width:60px" title="Spéciales"><div class="progress-fill special" style="width:' + specialPct + '%"></div></div>' +
+                    '</div>' +
+                    '<div class="exp-stats">' +
+                        '<span>' + statusHtml + ' ◇ ' + s.mainOwned + '/' + s.mainTotal + '</span>' +
+                        '<span>★ ' + s.specialOwned + '/' + s.specialTotal + '</span>' +
+                    '</div>' +
+                '</div>';
+            
+            item.addEventListener("click", function() {
+                var isOnlyThis = true;
+                EXP_ORDER.forEach(function(e) {
+                    if (DATA.stats[e]) {
+                        if (e === exp) { if (!selectedExps[e]) isOnlyThis = false; }
+                        else { if (selectedExps[e]) isOnlyThis = false; }
+                    }
+                });
+                
+                if (isOnlyThis) { selectAllExp(); }
+                else {
+                    EXP_ORDER.forEach(function(e) { selectedExps[e] = (e === exp); });
+                    document.querySelectorAll("#expCheckboxList input").forEach(function(cb) {
+                        cb.checked = (cb.dataset.exp === exp);
+                    });
+                    updateExpCount();
+                    updateProgressBarsVisibility();
+                    renderCards();
+                }
+            });
+            
+            grid.appendChild(item);
+        });
+    }
+    
+    function setupEvents() {
+        document.querySelectorAll(".toggle-btn").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                document.querySelectorAll(".toggle-btn").forEach(function(b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                currentFilter = btn.dataset.filter;
+                renderCards();
+            });
+        });
+        
+        document.getElementById("expFilterBtn").addEventListener("click", function(e) {
+            e.stopPropagation();
+            document.getElementById("expFilterPopup").classList.toggle("active");
+        });
+        
+        document.addEventListener("click", function(e) {
+            var popup = document.getElementById("expFilterPopup");
+            var btn = document.getElementById("expFilterBtn");
+            if (!popup.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                popup.classList.remove("active");
+            }
+        });
+        
+        document.getElementById("filterRarity").addEventListener("change", function(e) {
+            currentRarity = e.target.value;
+            renderCards();
+        });
+        
+        document.getElementById("filterType").addEventListener("change", function(e) {
+            currentType = e.target.value;
+            renderCards();
+        });
+        
+        document.getElementById("searchInput").addEventListener("input", function(e) {
+            searchQuery = e.target.value.toLowerCase();
+            renderCards();
+        });
+    }
+    
+    function renderCards() {
+        var grid = document.getElementById("cardsGrid");
+        grid.innerHTML = "";
+        
+        var filtered = DATA.cards.filter(function(card) {
+            if (currentFilter === "owned" && !card.owned) return false;
+            if (currentFilter === "missing" && card.owned) return false;
+            if (currentFilter === "dupes" && (!card.owned || card.amount < 2)) return false;
+            
+            var inSelectedExp = false;
+            card.exps.forEach(function(exp) { if (selectedExps[exp]) inSelectedExp = true; });
+            if (!inSelectedExp) return false;
+            
+            if (currentRarity !== "all" && card.rarity !== currentRarity) return false;
+            if (currentType === "main" && !card.isMain) return false;
+            if (currentType === "special" && card.isMain) return false;
+            if (searchQuery && card.name.toLowerCase().indexOf(searchQuery) === -1) return false;
+            return true;
+        });
+        
+        filtered.sort(function(a, b) {
+            var expA = "", expB = "";
+            a.exps.forEach(function(e) { if (selectedExps[e] && !expA) expA = e; });
+            b.exps.forEach(function(e) { if (selectedExps[e] && !expB) expB = e; });
+            if (expA !== expB) return EXP_ORDER.indexOf(expA) - EXP_ORDER.indexOf(expB);
+            return (parseInt(a.nums[expA]) || 999) - (parseInt(b.nums[expB]) || 999);
+        });
+        
+        document.getElementById("cardsCount").textContent = filtered.length + " cartes";
+        
+        filtered.forEach(function(card) {
+            var expToShow = card.exps[0] || "?";
+            card.exps.forEach(function(e) { if (selectedExps[e]) expToShow = e; });
+            var num = card.nums[expToShow] || "?";
+            
+            var div = document.createElement("div");
+            div.className = "card " + (card.owned ? "owned" : "missing");
+            
+            var amountHtml = card.owned ? '<span class="card-amount">x' + card.amount + '</span>' : '<span></span>';
+            
+            div.innerHTML = '<div class="card-img-container">' +
+                '<img class="card-img" src="' + card.img + '" alt="' + card.name + '" loading="lazy">' +
+                '<div class="card-badges">' + amountHtml +
+                '<span class="card-rarity rarity-' + card.rarity + '">' + card.raritySymbol + '</span></div>' +
+                '<span class="card-type-badge ' + (card.isMain ? 'type-main' : 'type-special') + '">' + (card.isMain ? '◇' : '★') + '</span>' +
+                '</div><div class="card-info"><div class="card-name">' + card.name + '</div>' +
+                '<div class="card-details"><span>#' + num + '</span><span>' + expToShow + '</span></div></div>';
+            
+            div.addEventListener("click", function() { showCardModal(card); });
+            grid.appendChild(div);
+        });
+    }
+    
+    function showCardModal(card) {
+        var modal = document.getElementById("cardModal");
+        var content = document.getElementById("modalContent");
+        
+        var expsHtml = card.exps.map(function(e) {
+            return '<span class="modal-exp-tag">' + e + ' #' + card.nums[e] + '</span>';
+        }).join("");
+        
+        var statusText = card.owned ? '✅ Possédée (x' + card.amount + ')' : '❌ Carte manquante';
+        
+        content.innerHTML = '<button class="modal-close" onclick="closeModal()">×</button>' +
+            '<img class="modal-card-img ' + (card.owned ? '' : 'missing') + '" src="' + card.img + '" alt="' + card.name + '">' +
+            '<h2 class="modal-title">' + card.name + '</h2>' +
+            '<div class="modal-rarity"><span class="card-rarity rarity-' + card.rarity + '" style="font-size:16px">' + card.raritySymbol + '</span>' +
+            '<span>' + card.rarityName + '</span><span style="color:' + (card.isMain ? 'var(--success)' : 'var(--accent)') + '">(' + (card.isMain ? 'Principale' : 'Spéciale') + ')</span></div>' +
+            '<div class="modal-exps"><strong>Extensions:</strong><br>' + expsHtml + '</div>' +
+            '<div class="modal-status ' + (card.owned ? 'owned' : 'missing') + '">' + statusText + '</div>';
+        
+        modal.classList.add("active");
+    }
+    
+    function closeModal() { document.getElementById("cardModal").classList.remove("active"); }
+    
+    document.getElementById("cardModal").addEventListener("click", function(e) {
+        if (e.target.id === "cardModal") closeModal();
+    });
+    
+    document.addEventListener("keydown", function(e) { if (e.key === "Escape") closeModal(); });
+    
+    loadData();
+    </script>
+</body>
+</html>
